@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { uploadPhoto } from '../lib/photos'
+import { suggestFromPhoto, type Suggestion } from '../lib/suggest'
 import { CATEGORIES, type Item, type ItemPatch, type Member } from '../types'
 import { Modal } from './Modal'
 
@@ -25,7 +26,28 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestNote, setSuggestNote] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const askForSuggestion = async (path: string) => {
+    setSuggesting(true)
+    setSuggestion(null)
+    setSuggestNote(null)
+    const result = await suggestFromPhoto(path)
+    setSuggesting(false)
+    if ('error' in result) setSuggestNote(result.disabled ? null : result.error)
+    else setSuggestion(result)
+  }
+
+  const applySuggestion = (s: Suggestion) => {
+    if (!name.trim()) setName(s.name)
+    if (!category) setCategory(s.category)
+    if (!description.trim()) setDescription(s.description)
+    if (!link.trim() && s.product_link) setLink(s.product_link)
+    setSuggestion(null)
+  }
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return
@@ -33,7 +55,9 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
     setPreview(URL.createObjectURL(file))
     setUploading(true)
     try {
-      setPhotoPath(await uploadPhoto(file))
+      const path = await uploadPhoto(file)
+      setPhotoPath(path)
+      askForSuggestion(path)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Photo upload failed')
       setPreview(photoUrl)
@@ -78,9 +102,49 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
             <button type="button" className="link-btn" onClick={() => fileRef.current?.click()}>
               Change photo
             </button>
-            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined) }}>
+            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined); setSuggestion(null) }}>
               Remove photo
             </button>
+            {photoPath && !suggesting && !suggestion && (
+              <button type="button" className="link-btn" onClick={() => askForSuggestion(photoPath)}>
+                Suggest details
+              </button>
+            )}
+          </div>
+        )}
+
+        {suggesting && (
+          <div className="suggest-card busy">
+            <span className="spinner" aria-hidden="true" />
+            Looking up this item and its product page…
+          </div>
+        )}
+        {suggestNote && <p className="muted small">{suggestNote}</p>}
+        {suggestion && (
+          <div className="suggest-card">
+            <p className="eyebrow">Looks like</p>
+            <strong>{suggestion.name}</strong>
+            <span className="muted small">
+              {suggestion.category}
+              {suggestion.confidence !== 'high' && ` · ${suggestion.confidence} confidence`}
+            </span>
+            {suggestion.description && <span className="small">{suggestion.description}</span>}
+            {suggestion.product_link ? (
+              <a className="small" href={suggestion.product_link} target="_blank" rel="noreferrer">
+                {new URL(suggestion.product_link).hostname.replace(/^www\./, '')} ↗
+              </a>
+            ) : (
+              <span className="muted small">No product link found</span>
+            )}
+            <div className="row gap">
+              <button type="button" className="btn primary" onClick={() => applySuggestion(suggestion)}>
+                Use this
+              </button>
+              <button type="button" className="link-btn" onClick={() => setSuggestion(null)}>
+                No thanks
+              </button>
+            </div>
+            <span className="muted tiny">Fills in any empty fields. Check the link before saving.</span>
           </div>
         )}
 
