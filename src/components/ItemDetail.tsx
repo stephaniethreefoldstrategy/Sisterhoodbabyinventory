@@ -50,6 +50,7 @@ export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUn
           <p className="banner">Archived{item.archive_reason ? `: ${item.archive_reason}` : ''}</p>
         )}
 
+        <span className="cat-tag">{item.category}</span>
         {item.description && <p className="desc">{item.description}</p>}
         {item.product_link && (
           <a className="product-link" href={item.product_link} target="_blank" rel="noreferrer">

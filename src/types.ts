@@ -22,6 +22,7 @@ export interface Member {
 export interface Item {
   id: string
   name: string
+  category: string
   description: string
   product_link: string | null
   photo_path: string | null
@@ -50,6 +51,7 @@ export interface ItemEvent {
 // Fields an undo is allowed to write back
 export const EDITABLE_FIELDS = [
   'name',
+  'category',
   'description',
   'product_link',
   'photo_path',
@@ -66,3 +68,19 @@ export const snapshot = (item: Item): ItemPatch =>
   Object.fromEntries(EDITABLE_FIELDS.map((f) => [f, item[f]])) as ItemPatch
 
 export const ARCHIVE_REASONS = ['Thrown away', 'Given away', 'Sold', 'Not using anymore', 'Broken'] as const
+
+export const CATEGORIES = [
+  'Sleep',
+  'Feeding',
+  'Out & about',
+  'Car seats',
+  'Nursery',
+  'Bath & changing',
+  'Play & toys',
+  'Clothes',
+  'Books',
+  'Safety',
+  'Other',
+] as const
+
+export type SortKey = 'newest' | 'updated' | 'az'

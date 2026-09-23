@@ -10,6 +10,8 @@ import { ItemForm } from './components/ItemForm'
 import { ItemDetail } from './components/ItemDetail'
 import { Activity } from './components/Activity'
 import { People } from './components/People'
+import { Filters } from './components/Filters'
+import { applyFilters, useStoredFilters } from './lib/filters'
 
 type View = 'all' | 'available' | 'borrowed' | 'archive' | 'activity' | 'people'
 
@@ -57,7 +59,7 @@ function Inventory({ session }: { session: Session }) {
 
   const [view, setView] = useState<View>('all')
   const [search, setSearch] = useState('')
-  const [person, setPerson] = useState<string | null>(null)
+  const [filters, setFilters] = useStoredFilters()
   const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState<Item | 'new' | null>(null)
   const [undos, setUndos] = useState<UndoEntry[]>([])
@@ -129,6 +131,7 @@ function Inventory({ session }: { session: Session }) {
     if (target.archived === null) target.archived = false
     if (target.name === null) target.name = item.name
     if (target.description === null) target.description = ''
+    if (!target.category) target.category = 'Other'
     try {
       await changeItem(item, target, `undo on ${item.name}`)
     } catch (e) {
@@ -136,7 +139,8 @@ function Inventory({ session }: { session: Session }) {
     }
   }
 
-  const visible = useMemo(() => {
+  // Items in the current tab matching the search, before the filter panel is applied
+  const inView = useMemo(() => {
     const q = search.trim().toLowerCase()
     return items.filter((i) => {
       if (i.deleted_at && view !== 'archive') return false
@@ -144,11 +148,12 @@ function Inventory({ session }: { session: Session }) {
       if (view !== 'archive' && i.archived) return false
       if (view === 'available' && i.holder_id !== i.owner_id) return false
       if (view === 'borrowed' && i.holder_id === i.owner_id) return false
-      if (person && i.owner_id !== person && i.holder_id !== person) return false
-      if (q && !`${i.name} ${i.description}`.toLowerCase().includes(q)) return false
+      if (q && !`${i.name} ${i.description} ${i.category}`.toLowerCase().includes(q)) return false
       return true
     })
-  }, [items, view, search, person])
+  }, [items, view, search])
+  const visible = useMemo(() => applyFilters(inView, filters), [inView, filters])
+  const categoryBase = useMemo(() => applyFilters(inView, filters, true), [inView, filters])
 
   if (loading) return <Splash />
   if (error) return <main className="login"><p className="error">{error}</p></main>
@@ -182,22 +187,17 @@ function Inventory({ session }: { session: Session }) {
       </nav>
 
       {showGrid && (
-        <div className="filters">
-          <input className="search" type="search" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <div className="people-filter" role="group" aria-label="Filter by person">
-            {members.map((m) => (
-              <button
-                key={m.id}
-                className={`pf ${person === m.id ? 'on' : ''}`}
-                onClick={() => setPerson(person === m.id ? null : m.id)}
-                title={`Items ${m.display_name} owns or has`}
-              >
-                <Avatar member={m} size={30} />
-                <span>{m.id === me.id ? 'Me' : m.display_name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <Filters
+          filters={filters}
+          setFilters={setFilters}
+          search={search}
+          setSearch={setSearch}
+          members={members}
+          me={me}
+          categoryBase={categoryBase}
+          shown={visible.length}
+          total={inView.length}
+        />
       )}
 
       <main className="content">
@@ -273,6 +273,7 @@ function ItemCard({ item, owner, holder, photo, onOpen }: { item: Item; owner?: 
           <span className={`badge ${status.toLowerCase().replace(' ', '-')}`}>{status}</span>
         </div>
         <div className="card-body">
+          <span className="cat-tag">{item.category}</span>
           <h3>{item.name}</h3>
           <PersonChip member={owner} prefix="Owner" />
           {item.holder_id !== item.owner_id && <PersonChip member={holder} prefix="With" />}

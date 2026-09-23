@@ -23,6 +23,7 @@ export function describeEvent(ev: ItemEvent, members: Member[]): string {
       const changed: string[] = []
       if (b && a) {
         if (b.name !== a.name) changed.push('name')
+        if (b.category !== a.category) changed.push(`category (now ${a.category})`)
         if (b.description !== a.description) changed.push('description')
         if (b.product_link !== a.product_link) changed.push('link')
         if (b.photo_path !== a.photo_path) changed.push('photo')

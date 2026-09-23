@@ -7,7 +7,9 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 - **Items** with a photo, description, product link, owner and who currently has it
 - **Photo upload** straight from a phone camera or camera roll. Photos are shrunk before upload and kept in private storage.
 - **Pass along:** "I've got it now", "Returned to owner" or "Pass to…"
-- **Views:** Everything · Free to borrow · On loan · Archive · Activity · People, plus search and per-person filters
+- **Views:** Everything · Free to borrow · On loan · Archive · Activity · People
+- **Categories** (Sleep, Feeding, Out & about, Car seats, Nursery, Bath & changing, Play & toys, Clothes, Books, Safety, Other) with a quick filter row showing counts
+- **Filters:** search, category, owned by, currently with, only items with photos, and sort (newest, recently changed, A–Z). Filters are remembered on each device.
 - **Archive** with a reason (thrown away, given away, sold, not using, broken). You can bring things back.
 - **Undo:** every change shows an Undo button, Ctrl/Cmd+Z undoes your last change, and each item's history (and the Activity feed) can undo its latest change. Deleting is soft, so deleted items can always be restored.
 - **Live updates** when someone else makes a change

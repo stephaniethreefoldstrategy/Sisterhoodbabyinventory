@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { uploadPhoto } from '../lib/photos'
-import type { Item, ItemPatch, Member } from '../types'
+import { CATEGORIES, type Item, type ItemPatch, type Member } from '../types'
 import { Modal } from './Modal'
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
 
 export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props) {
   const [name, setName] = useState(item?.name ?? '')
+  const [category, setCategory] = useState(item?.category ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
   const [link, setLink] = useState(item?.product_link ?? '')
   const [ownerId, setOwnerId] = useState(item?.owner_id ?? me.id)
@@ -50,6 +51,7 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
     try {
       await onSave({
         name: name.trim(),
+        category: category || 'Other',
         description: description.trim(),
         product_link: url || null,
         photo_path: photoPath,
@@ -86,6 +88,23 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
           Item
           <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bugaboo pram" />
         </label>
+        <div className="label-text">
+          Category
+          <div className="chips" role="radiogroup" aria-label="Category">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={category === c}
+                className={`chip ${category === c ? 'on' : ''}`}
+                onClick={() => setCategory(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
         <label>
           Description
           <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Size, age range, condition, bits included…" />
