@@ -17,7 +17,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 - **Archive** with a reason (thrown away, given away, sold, not using, broken). You can bring things back.
 - **Undo:** every change shows an Undo button, Ctrl/Cmd+Z undoes your last change, and each item's history (and the Activity feed) can undo its latest change. Deleting is soft, so deleted items can always be restored.
 - **Live updates** when someone else makes a change
-- **Own login for everyone:** each sister signs in with Google *or* her own email + password (create account, forgot password, and change password under *People*). Only emails added under *People* can see anything, and the database enforces this with row level security.
+- **Invite-only logins:** on *People*, enter a name + email and tap *Invite*. The `invite-member` edge function creates a ready-to-use login with an easy password (e.g. `teddy-clover-4827`) and gives you a message to copy or text. No confirmation emails. *Reset password* next to a person issues a new one; anyone can change their own password. Only invited people can see anything (enforced by row level security).
 
 ## Cost
 
@@ -36,13 +36,7 @@ npm run dev
 
 ## One-time setup
 
-1. **Google sign-in (optional, free):** the Google button only appears once this is done.
-   1. console.cloud.google.com → create a project (e.g. "Sisterhood Inventory").
-   2. *APIs & Services → OAuth consent screen*: External, app name "Sisterhood Baby Inventory", your email; add yourself and the sisters as test users (or click *Publish app*).
-   3. *APIs & Services → Credentials → Create credentials → OAuth client ID*: type *Web application*; Authorised redirect URI `https://eblyucklornvjollzfha.supabase.co/auth/v1/callback`.
-   4. Copy the Client ID and Client secret into Supabase → Authentication → Sign In / Providers → Google, and switch it on.
-2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to
-   your Netlify address (e.g. `https://sisterhood-inventory.netlify.app/`) and add it plus `http://localhost:5173/` to the redirect URLs.
+1. **Turn off public sign-ups:** Supabase → Authentication → Sign In / Providers → switch off *Allow new users to sign up*. Invites still work (they're created by the invite function).
+2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to your Netlify address (e.g. `https://sisterhood-inventory.netlify.app/`).
 3. **Hosting (free, works with a private repo):** sign up at netlify.com with GitHub → *Add new site* → *Import an existing project* → GitHub → pick this repo and allow access to it. The build settings come from `netlify.toml`, so just click *Deploy*. Rename the site under *Site configuration* (e.g. `sisterhood-inventory`). Every push to the production branch redeploys automatically.
-4. **Invite everyone:** sign in, open *People* and add each sister's email. They then either tap *Continue with Google* or choose *Create account* and set a password.
-5. **Emails (recommended):** Supabase's built-in mailer only sends a few emails an hour, which can hold up sign-up confirmations and password resets. For reliable delivery, add SMTP details (e.g. Resend or your Google Workspace) under Supabase → Authentication → Emails → SMTP Settings.
+4. **Invite everyone:** sign in, open *People*, and invite each sister. Text them the message it gives you.

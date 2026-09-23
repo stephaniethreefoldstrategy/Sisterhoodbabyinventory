@@ -396,6 +396,15 @@ form .chip.on, .filter-panel .chip.on { border-color: var(--plum); }
 .find-product .chip { font-size: 0.88rem; }
 .tiny { font-size: 0.75rem; }
 
+/* Invites */
+.person-reset { margin-left: auto; font-size: 0.85rem; }
+.invite-card { background: var(--pink); }
+.invite-text {
+  margin: 0; padding: 12px 14px;
+  border-radius: 12px; background: var(--paper);
+  font: 0.9rem/1.5 var(--body); white-space: pre-wrap; word-break: break-word;
+}
+
 /* Toast */
 .toast-zone {
   position: fixed; left: 16px; right: 16px;
