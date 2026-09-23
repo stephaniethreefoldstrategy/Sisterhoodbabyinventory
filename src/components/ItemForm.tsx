@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { signPhotos, uploadPhoto } from '../lib/photos'
 import { photoFromLink } from '../lib/linkPhoto'
+import { lentCount, loansOf } from '../lib/status'
 import { CATEGORIES, type Item, type ItemPatch, type Member } from '../types'
 import { Modal } from './Modal'
 
@@ -23,6 +24,7 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
   const [ownerId, setOwnerId] = useState(item?.owner_id ?? me.id)
   const [holderId, setHolderId] = useState(item?.holder_name ? SOMEONE : item?.holder_id ?? item?.owner_id ?? me.id)
   const [holderName, setHolderName] = useState(item?.holder_name ?? '')
+  const [quantity, setQuantity] = useState(item?.quantity ?? 1)
   const [available, setAvailable] = useState(item?.available ?? true)
   const [availabilityNote, setAvailabilityNote] = useState(item?.availability_note ?? '')
   const [linkPhoto, setLinkPhoto] = useState<'idle' | 'loading' | 'failed'>('idle')
@@ -88,6 +90,29 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
     setError(null)
     const url = normaliseLink(link)
     const outside = holderId === SOMEONE
+    const qty = Math.max(1, Math.floor(quantity) || 1)
+    const loans = item ? loansOf(item) : []
+    const lent = item ? lentCount(item) : 0
+    // Who has it, in the shape the chosen quantity needs
+    let holding: Pick<ItemPatch, 'holder_id' | 'holder_name' | 'loans'>
+    if (qty > 1) {
+      if (qty < lent) {
+        setError(`${lent} are out on loan, so the quantity can't be less than ${lent}. Mark some as returned first.`)
+        setSaving(false)
+        return
+      }
+      // A single item that was lent out becomes a loan of 1
+      const single = outside ? { member_id: null, name: holderName.trim() || 'Someone' } : holderId !== ownerId ? { member_id: holderId, name: null } : null
+      holding = { holder_id: ownerId, holder_name: null, loans: loans.length ? loans : single ? [{ ...single, qty: 1 }] : [] }
+    } else if (lent > 1) {
+      setError(`${lent} are out on loan. Mark them as returned before changing the quantity to 1.`)
+      setSaving(false)
+      return
+    } else if (lent === 1) {
+      holding = { holder_id: loans[0].member_id, holder_name: loans[0].name, loans: [] }
+    } else {
+      holding = { holder_id: outside ? null : holderId, holder_name: outside ? holderName.trim() || null : null, loans: [] }
+    }
     try {
       const photo = photoPath ?? (url && linkPhoto !== 'failed' ? await fetchLinkPhoto(url) : null)
       await onSave({
@@ -97,8 +122,8 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
         product_link: url || null,
         photo_path: photo,
         owner_id: ownerId,
-        holder_id: outside ? null : holderId,
-        holder_name: outside ? holderName.trim() || null : null,
+        quantity: qty,
+        ...holding,
         available,
         availability_note: available ? null : availabilityNote.trim() || null,
       })
@@ -128,10 +153,16 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
           </div>
         )}
 
-        <label>
-          Item
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bugaboo pram" />
-        </label>
+        <div className="name-qty">
+          <label>
+            Item
+            <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bugaboo pram" />
+          </label>
+          <label>
+            Qty
+            <input type="number" inputMode="numeric" min={1} value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+          </label>
+        </div>
         <div className="label-text">
           Category
           <div className="chips" role="radiogroup" aria-label="Category">
@@ -201,17 +232,21 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
               ))}
             </select>
           </label>
-          <label>
-            Who has it now
-            <select value={holderId} onChange={(e) => { setHolderId(e.target.value); setHolderTouched(true) }}>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>{m.display_name}</option>
-              ))}
-              <option value={SOMEONE}>Someone else…</option>
-            </select>
-          </label>
+          {quantity > 1 ? (
+            <p className="muted small qty-hint">Lend some out from the item's page after saving.</p>
+          ) : (
+            <label>
+              Who has it now
+              <select value={holderId} onChange={(e) => { setHolderId(e.target.value); setHolderTouched(true) }}>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.display_name}</option>
+                ))}
+                <option value={SOMEONE}>Someone else…</option>
+              </select>
+            </label>
+          )}
         </div>
-        {holderId === SOMEONE && (
+        {quantity <= 1 && holderId === SOMEONE && (
           <label>
             Their name
             <input required value={holderName} onChange={(e) => setHolderName(e.target.value)} placeholder="e.g. Mum, Jess from mothers group" />

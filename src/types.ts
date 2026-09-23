@@ -19,6 +19,13 @@ export interface Member {
   created_at: string
 }
 
+// Some of a multi-quantity item lent to a sister (member_id) or someone outside the app (name)
+export interface Loan {
+  member_id: string | null
+  name: string | null
+  qty: number
+}
+
 export interface Item {
   id: string
   name: string
@@ -29,6 +36,8 @@ export interface Item {
   owner_id: string | null
   holder_id: string | null
   holder_name: string | null
+  quantity: number
+  loans: Loan[]
   available: boolean
   availability_note: string | null
   archived: boolean
@@ -70,6 +79,8 @@ export const EDITABLE_FIELDS = [
   'owner_id',
   'holder_id',
   'holder_name',
+  'quantity',
+  'loans',
   'available',
   'availability_note',
   'archived',

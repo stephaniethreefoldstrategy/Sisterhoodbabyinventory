@@ -9,6 +9,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 - **Photo from the product link:** if an item has a link but no photo, the app grabs the product photo from that page (the free `link-photo` Supabase Edge Function reads the page's share image). Items saved earlier get a *Get photo from link* button.
 - **Find the product link for free:** the add/edit form has *Search photo with Google Lens* (opens Lens with the item's photo) and *Google “item name”* buttons. Copy the right product link and paste it in.
 - **Pass along:** "I've got it now", "Returned to owner" or "Pass to…" another sister, or type the name of someone outside the app (e.g. "Mum")
+- **Quantity:** items like 10 muslin wraps can be split between people: *Lend some* (who + how many), *Returned 1* / *Returned all*. Cards show e.g. "4 of 10 available".
 - **Available / Not available** switch with an optional reason (using it myself, reserved, needs repair…), shown on the card and filterable
 - **Views:** Everything · Free to borrow · On loan · Archive · Activity · People
 - **Categories** (Sleep, Feeding, Out & about, Car seats, Nursery, Bath & changing, Play & toys, Clothes, Books, Safety, Other) with a quick filter row showing counts
@@ -35,9 +36,11 @@ npm run dev
 
 ## One-time setup
 
-1. **Google sign-in:** create an OAuth client in Google Cloud Console (type: Web application) with the authorised redirect URI
-   `https://eblyucklornvjollzfha.supabase.co/auth/v1/callback`. Then paste the client ID and secret into
-   Supabase → Authentication → Sign In / Providers → Google.
+1. **Google sign-in (optional, free):** the Google button only appears once this is done.
+   1. console.cloud.google.com → create a project (e.g. "Sisterhood Inventory").
+   2. *APIs & Services → OAuth consent screen*: External, app name "Sisterhood Baby Inventory", your email; add yourself and the sisters as test users (or click *Publish app*).
+   3. *APIs & Services → Credentials → Create credentials → OAuth client ID*: type *Web application*; Authorised redirect URI `https://eblyucklornvjollzfha.supabase.co/auth/v1/callback`.
+   4. Copy the Client ID and Client secret into Supabase → Authentication → Sign In / Providers → Google, and switch it on.
 2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to
    your Netlify address (e.g. `https://sisterhood-inventory.netlify.app/`) and add it plus `http://localhost:5173/` to the redirect URLs.
 3. **Hosting (free, works with a private repo):** sign up at netlify.com with GitHub → *Add new site* → *Import an existing project* → GitHub → pick this repo and allow access to it. The build settings come from `netlify.toml`, so just click *Deploy*. Rename the site under *Site configuration* (e.g. `sisterhood-inventory`). Every push to the production branch redeploys automatically.

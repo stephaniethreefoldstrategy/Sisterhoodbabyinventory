@@ -374,6 +374,23 @@ form .chip.on, .filter-panel .chip.on { border-color: var(--plum); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Quantity */
+.name-qty { display: grid; grid-template-columns: 1fr 84px; gap: 12px; align-items: end; }
+.qty-hint { align-self: end; margin: 0 0 12px; }
+.qty-line { font-size: 0.88rem; }
+.qty-badge {
+  position: absolute; top: 10px; right: 10px;
+  padding: 4px 9px; border-radius: 999px;
+  background: var(--plum); color: var(--pink);
+  font-size: 0.75rem; font-weight: 700;
+}
+.loan-list { list-style: none; margin: -6px 0 0; padding: 0 14px; border-radius: var(--radius); background: var(--cream); }
+.loan-list li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.loan-list li:last-child { border-bottom: 0; }
+.loan-qty { font-weight: 700; color: var(--plum); }
+.loan-actions { margin-left: auto; display: flex; gap: 14px; }
+.loan-actions .link-btn { font-size: 0.85rem; }
+
 /* Free product lookup */
 .find-product { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: -4px; }
 .find-product .chip { font-size: 0.88rem; }

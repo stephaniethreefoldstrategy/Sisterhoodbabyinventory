@@ -12,7 +12,7 @@ import { Activity } from './components/Activity'
 import { People } from './components/People'
 import { Filters } from './components/Filters'
 import { applyFilters, useStoredFilters } from './lib/filters'
-import { STATUS_LABEL, isLent, statusOf } from './lib/status'
+import { isLent, isMulti, loanLabel, loansOf, statusLabel, statusOf } from './lib/status'
 
 type View = 'all' | 'available' | 'borrowed' | 'archive' | 'activity' | 'people'
 
@@ -139,6 +139,8 @@ function Inventory({ session }: { session: Session }) {
     if (target.description === null) target.description = ''
     if (!target.category) target.category = 'Other'
     if (target.available === null) target.available = true
+    if (!target.quantity) target.quantity = 1
+    if (!target.loans) target.loans = []
     try {
       await changeItem(item, target, `undo on ${item.name}`)
     } catch (e) {
@@ -155,7 +157,7 @@ function Inventory({ session }: { session: Session }) {
       if (view !== 'archive' && i.archived) return false
       if (view === 'available' && statusOf(i) !== 'available') return false
       if (view === 'borrowed' && !isLent(i)) return false
-      if (q && !`${i.name} ${i.description} ${i.category} ${i.holder_name ?? ''}`.toLowerCase().includes(q)) return false
+      if (q && !`${i.name} ${i.description} ${i.category} ${i.holder_name ?? ''} ${loansOf(i).map((l) => l.name ?? '').join(' ')}`.toLowerCase().includes(q)) return false
       return true
     })
   }, [items, view, search])
@@ -212,7 +214,7 @@ function Inventory({ session }: { session: Session }) {
           visible.length ? (
             <ul className="grid">
               {visible.map((i) => (
-                <ItemCard key={i.id} item={i} owner={byId(i.owner_id)} holder={byId(i.holder_id)} photo={i.photo_path ? photos[i.photo_path] : undefined} onOpen={() => setOpenId(i.id)} />
+                <ItemCard key={i.id} item={i} owner={byId(i.owner_id)} holder={byId(i.holder_id)} members={members} photo={i.photo_path ? photos[i.photo_path] : undefined} onOpen={() => setOpenId(i.id)} />
               ))}
             </ul>
           ) : (
@@ -270,23 +272,40 @@ function Inventory({ session }: { session: Session }) {
   )
 }
 
-function ItemCard({ item, owner, holder, photo, onOpen }: { item: Item; owner?: Member; holder?: Member; photo?: string; onOpen: () => void }) {
+function ItemCard({ item, owner, holder, members, photo, onOpen }: { item: Item; owner?: Member; holder?: Member; members: Member[]; photo?: string; onOpen: () => void }) {
   const status = statusOf(item)
   return (
     <li>
       <button className="card" onClick={onOpen}>
         <div className="card-photo">
           {photo ? <img src={photo} alt="" loading="lazy" /> : <Clover fill="#FFD6EB" size={56} />}
-          <span className={`badge ${status}`}>{STATUS_LABEL[status]}</span>
+          <span className={`badge ${status}`}>{statusLabel(item)}</span>
+          {isMulti(item) && <span className="qty-badge">×{item.quantity}</span>}
         </div>
         <div className="card-body">
           <span className="cat-tag">{item.category}</span>
           <h3>{item.name}</h3>
           <PersonChip member={owner} prefix="Owner" />
-          {isLent(item) && (item.holder_name ? <NameChip name={item.holder_name} prefix="With" /> : <PersonChip member={holder} prefix="With" />)}
+          {isMulti(item) && <LoanChips item={item} members={members} />}
+          {!isMulti(item) && isLent(item) && (item.holder_name ? <NameChip name={item.holder_name} prefix="With" /> : <PersonChip member={holder} prefix="With" />)}
           {status === 'unavailable' && item.availability_note && <span className="note">{item.availability_note}</span>}
         </div>
       </button>
     </li>
+  )
+}
+
+function LoanChips({ item, members }: { item: Item; members: Member[] }) {
+  const loans = loansOf(item)
+  const shown = loans.slice(0, 2)
+  return (
+    <>
+      {shown.map((l) => {
+        const label = `${loanLabel(l, members)} ×${l.qty}`
+        const member = members.find((m) => m.id === l.member_id)
+        return member ? <PersonChip key={label} member={{ ...member, display_name: label }} prefix="With" /> : <NameChip key={label} name={label} prefix="With" />
+      })}
+      {loans.length > 2 && <span className="muted small">+{loans.length - 2} more</span>}
+    </>
   )
 }

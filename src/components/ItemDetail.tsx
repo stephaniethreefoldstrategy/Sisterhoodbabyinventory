@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ARCHIVE_REASONS, UNAVAILABLE_REASONS, type Item, type ItemEvent, type ItemPatch, type Member } from '../types'
+import { ARCHIVE_REASONS, UNAVAILABLE_REASONS, type Item, type Loan, type ItemEvent, type ItemPatch, type Member } from '../types'
 import { describeEvent, timeAgo } from '../lib/describe'
-import { STATUS_LABEL, isLent, statusOf } from '../lib/status'
+import { addLoan, isLent, isMulti, loanLabel, loansOf, remaining, returnLoan, statusLabel, statusOf } from '../lib/status'
 import { Avatar, Clover, NameChip, PersonChip } from './Clover'
 import { Modal } from './Modal'
 import { photoFromLink } from '../lib/linkPhoto'
@@ -18,7 +18,7 @@ interface Props {
   onClose: () => void
 }
 
-type Panel = null | 'archive' | 'someone' | 'unavailable'
+type Panel = null | 'archive' | 'someone' | 'unavailable' | 'lend'
 
 export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUndoEvent, onEdit, onClose }: Props) {
   const [panel, setPanel] = useState<Panel>(null)
@@ -39,6 +39,26 @@ export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUn
   const holder = members.find((m) => m.id === item.holder_id)
   const history = events.filter((e) => e.item_id === item.id)
   const status = statusOf(item)
+  const multi = isMulti(item)
+  const left = remaining(item)
+  const [lendTo, setLendTo] = useState(members.find((m) => m.id !== item.owner_id)?.id ?? '__someone')
+  const [lendName, setLendName] = useState('')
+  const [lendQty, setLendQty] = useState(1)
+
+  const lend = (e: React.FormEvent) => {
+    e.preventDefault()
+    const outside = lendTo === '__someone'
+    const who = outside ? { member_id: null, name: lendName.trim() } : { member_id: lendTo, name: null }
+    const qty = Math.min(Math.max(1, Math.floor(lendQty)), left)
+    if ((outside && !who.name) || qty < 1) return
+    const label = outside ? who.name : members.find((m) => m.id === lendTo)?.display_name
+    run({ loans: addLoan(loansOf(item), who, qty) }, `${qty} × ${item.name} now with ${label}`)
+    setLendQty(1)
+    setLendName('')
+  }
+
+  const giveBack = (l: Loan, qty: number) =>
+    run({ loans: returnLoan(loansOf(item), l, qty) }, `${qty} × ${item.name} returned by ${loanLabel(l, members)}`)
 
   const run = async (patch: ItemPatch, label: string) => {
     setBusy(true)
@@ -73,7 +93,7 @@ export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUn
       <div className="detail">
         <div className="detail-photo">
           {photoUrl ? <img src={photoUrl} alt={item.name} /> : <Clover fill="#FFD6EB" size={96} />}
-          <span className={`badge ${status}`}>{STATUS_LABEL[status]}</span>
+          <span className={`badge ${status}`}>{statusLabel(item)}</span>
           {!item.photo_path && item.product_link && !item.deleted_at && (
             <button className="btn photo-from-link" disabled={linkPhoto === 'loading'} onClick={fetchPhotoFromLink}>
               {linkPhoto === 'loading' ? 'Getting photo…' : linkPhoto === 'failed' ? 'No photo found on that page' : 'Get photo from link'}
@@ -102,11 +122,42 @@ export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUn
             <span className="eyebrow">Owner</span>
             <PersonChip member={owner} />
           </div>
-          <div>
-            <span className="eyebrow">Who has it</span>
-            {item.holder_name ? <NameChip name={item.holder_name} /> : <PersonChip member={holder} />}
-          </div>
+          {multi ? (
+            <div>
+              <span className="eyebrow">Quantity</span>
+              <span className="qty-line">{item.quantity} total · {left} with {owner?.display_name ?? 'owner'}</span>
+            </div>
+          ) : (
+            <div>
+              <span className="eyebrow">Who has it</span>
+              {item.holder_name ? <NameChip name={item.holder_name} /> : <PersonChip member={holder} />}
+            </div>
+          )}
         </div>
+
+        {multi && loansOf(item).length > 0 && (
+          <ul className="loan-list">
+            {loansOf(item).map((l) => {
+              const member = members.find((m) => m.id === l.member_id)
+              return (
+                <li key={`${l.member_id ?? ''}${l.name ?? ''}`}>
+                  {member ? <PersonChip member={member} /> : <NameChip name={l.name ?? 'Someone'} />}
+                  <span className="loan-qty">×{l.qty}</span>
+                  {!item.deleted_at && !item.archived && (
+                    <span className="loan-actions">
+                      {l.qty > 1 && (
+                        <button className="link-btn" disabled={busy} onClick={() => giveBack(l, 1)}>Returned 1</button>
+                      )}
+                      <button className="link-btn" disabled={busy} onClick={() => giveBack(l, l.qty)}>
+                        {l.qty > 1 ? 'Returned all' : 'Returned'}
+                      </button>
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
         {item.deleted_at ? (
           <button className="btn primary wide" disabled={busy} onClick={() => run({ deleted_at: null }, `${item.name} restored`)}>
@@ -123,40 +174,83 @@ export function ItemDetail({ item, me, members, events, photoUrl, onChange, onUn
           </div>
         ) : (
           <>
-            <div className="actions">
-              {(item.holder_id !== me.id || item.holder_name) && (
-                <button className="btn primary" disabled={busy} onClick={() => passTo(me.id)}>
-                  I've got it now
-                </button>
-              )}
-              {isLent(item) && item.owner_id && (
-                <button className="btn" disabled={busy} onClick={() => passTo(item.owner_id!)}>
-                  Returned to {owner?.display_name ?? 'owner'}
-                </button>
-              )}
-              <label className="pass-to">
-                <span className="sr-only">Pass to</span>
-                <select value="" disabled={busy} onChange={(e) => passTo(e.target.value)}>
-                  <option value="" disabled>Pass to…</option>
-                  {members.filter((m) => m.id !== item.holder_id || item.holder_name).map((m) => (
-                    <option key={m.id} value={m.id}>{m.display_name}</option>
-                  ))}
-                  <option value="__someone">Someone else (type a name)…</option>
-                </select>
-              </label>
-            </div>
-
-            {panel === 'someone' && (
-              <form className="inline-panel" onSubmit={passToOutside}>
-                <label>
-                  Who has it?
-                  <input autoFocus required value={outsideName} onChange={(e) => setOutsideName(e.target.value)} placeholder="e.g. Mum, Jess from mothers group" />
-                </label>
-                <div className="row gap">
-                  <button className="btn primary" disabled={busy || !outsideName.trim()}>Save</button>
-                  <button type="button" className="link-btn" onClick={() => setPanel(null)}>Cancel</button>
+            {multi ? (
+              left > 0 ? (
+                panel === 'lend' ? (
+                  <form className="inline-panel" onSubmit={lend}>
+                    <div className="two-col">
+                      <label>
+                        Who's taking some?
+                        <select value={lendTo} onChange={(e) => setLendTo(e.target.value)}>
+                          {members.map((m) => (
+                            <option key={m.id} value={m.id}>{m.id === me.id ? `Me (${m.display_name})` : m.display_name}</option>
+                          ))}
+                          <option value="__someone">Someone else…</option>
+                        </select>
+                      </label>
+                      <label>
+                        How many? <span className="muted">(max {left})</span>
+                        <input type="number" inputMode="numeric" min={1} max={left} value={lendQty} onChange={(e) => setLendQty(Number(e.target.value))} />
+                      </label>
+                    </div>
+                    {lendTo === '__someone' && (
+                      <label>
+                        Their name
+                        <input required value={lendName} onChange={(e) => setLendName(e.target.value)} placeholder="e.g. Mum" />
+                      </label>
+                    )}
+                    <div className="row gap">
+                      <button className="btn primary" disabled={busy}>Save</button>
+                      <button type="button" className="link-btn" onClick={() => setPanel(null)}>Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <button className="btn primary wide" disabled={busy} onClick={() => setPanel('lend')}>
+                    Lend some ({left} left)
+                  </button>
+                )
+              ) : (
+                <p className="muted small">All {item.quantity} are out on loan.</p>
+              )
+            ) : (
+              <>
+                <div className="actions">
+                  {(item.holder_id !== me.id || item.holder_name) && (
+                    <button className="btn primary" disabled={busy} onClick={() => passTo(me.id)}>
+                      I've got it now
+                    </button>
+                  )}
+                  {isLent(item) && item.owner_id && (
+                    <button className="btn" disabled={busy} onClick={() => passTo(item.owner_id!)}>
+                      Returned to {owner?.display_name ?? 'owner'}
+                    </button>
+                  )}
+                  <label className="pass-to">
+                    <span className="sr-only">Pass to</span>
+                    <select value="" disabled={busy} onChange={(e) => passTo(e.target.value)}>
+                      <option value="" disabled>Pass to…</option>
+                      {members.filter((m) => m.id !== item.holder_id || item.holder_name).map((m) => (
+                        <option key={m.id} value={m.id}>{m.display_name}</option>
+                      ))}
+                      <option value="__someone">Someone else (type a name)…</option>
+                    </select>
+                  </label>
                 </div>
-              </form>
+
+                {panel === 'someone' && (
+                  <form className="inline-panel" onSubmit={passToOutside}>
+                    <label>
+                      Who has it?
+                      <input autoFocus required value={outsideName} onChange={(e) => setOutsideName(e.target.value)} placeholder="e.g. Mum, Jess from mothers group" />
+                    </label>
+                    <div className="row gap">
+                      <button className="btn primary" disabled={busy || !outsideName.trim()}>Save</button>
+                      <button type="button" className="link-btn" onClick={() => setPanel(null)}>Cancel</button>
+                    </div>
+                  </form>
+                )}
+
+              </>
             )}
 
             <div className="avail-toggle" role="group" aria-label="Availability">

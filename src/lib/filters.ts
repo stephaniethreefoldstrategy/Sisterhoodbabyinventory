@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Item, SortKey } from '../types'
-import { statusOf } from './status'
+import { loansOf, statusOf } from './status'
 
 export interface FilterState {
   categories: string[]
@@ -43,7 +43,10 @@ export function applyFilters(items: Item[], f: FilterState, ignoreCategory = fal
     if (!ignoreCategory && f.categories.length && !f.categories.includes(i.category)) return false
     if (f.statuses.length && !f.statuses.includes(statusOf(i))) return false
     if (f.owners.length && !f.owners.includes(i.owner_id ?? '')) return false
-    if (f.holders.length && !f.holders.includes(i.holder_name ? '' : i.holder_id ?? '')) return false
+    if (f.holders.length) {
+      const holders = [i.holder_name ? '' : i.holder_id ?? '', ...loansOf(i).map((l) => l.member_id ?? '')]
+      if (!holders.some((h) => h && f.holders.includes(h))) return false
+    }
     if (f.photoOnly && !i.photo_path) return false
     return true
   })
