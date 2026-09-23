@@ -5,13 +5,14 @@ import { useInventory } from './lib/useInventory'
 import { insertItem, updateItem } from './lib/api'
 import { EDITABLE_FIELDS, snapshot, type Item, type ItemEvent, type ItemPatch, type Member } from './types'
 import { Login, NotInvited, SetNewPassword } from './components/Login'
-import { Avatar, Clover, PersonChip } from './components/Clover'
+import { Avatar, Clover, NameChip, PersonChip } from './components/Clover'
 import { ItemForm } from './components/ItemForm'
 import { ItemDetail } from './components/ItemDetail'
 import { Activity } from './components/Activity'
 import { People } from './components/People'
 import { Filters } from './components/Filters'
 import { applyFilters, useStoredFilters } from './lib/filters'
+import { STATUS_LABEL, isLent, statusOf } from './lib/status'
 
 type View = 'all' | 'available' | 'borrowed' | 'archive' | 'activity' | 'people'
 
@@ -137,6 +138,7 @@ function Inventory({ session }: { session: Session }) {
     if (target.name === null) target.name = item.name
     if (target.description === null) target.description = ''
     if (!target.category) target.category = 'Other'
+    if (target.available === null) target.available = true
     try {
       await changeItem(item, target, `undo on ${item.name}`)
     } catch (e) {
@@ -151,9 +153,9 @@ function Inventory({ session }: { session: Session }) {
       if (i.deleted_at && view !== 'archive') return false
       if (view === 'archive' && !i.archived && !i.deleted_at) return false
       if (view !== 'archive' && i.archived) return false
-      if (view === 'available' && i.holder_id !== i.owner_id) return false
-      if (view === 'borrowed' && i.holder_id === i.owner_id) return false
-      if (q && !`${i.name} ${i.description} ${i.category}`.toLowerCase().includes(q)) return false
+      if (view === 'available' && statusOf(i) !== 'available') return false
+      if (view === 'borrowed' && !isLent(i)) return false
+      if (q && !`${i.name} ${i.description} ${i.category} ${i.holder_name ?? ''}`.toLowerCase().includes(q)) return false
       return true
     })
   }, [items, view, search])
@@ -269,19 +271,20 @@ function Inventory({ session }: { session: Session }) {
 }
 
 function ItemCard({ item, owner, holder, photo, onOpen }: { item: Item; owner?: Member; holder?: Member; photo?: string; onOpen: () => void }) {
-  const status = item.deleted_at ? 'Deleted' : item.archived ? 'Archived' : item.holder_id === item.owner_id ? 'Available' : 'On loan'
+  const status = statusOf(item)
   return (
     <li>
       <button className="card" onClick={onOpen}>
         <div className="card-photo">
           {photo ? <img src={photo} alt="" loading="lazy" /> : <Clover fill="#FFD6EB" size={56} />}
-          <span className={`badge ${status.toLowerCase().replace(' ', '-')}`}>{status}</span>
+          <span className={`badge ${status}`}>{STATUS_LABEL[status]}</span>
         </div>
         <div className="card-body">
           <span className="cat-tag">{item.category}</span>
           <h3>{item.name}</h3>
           <PersonChip member={owner} prefix="Owner" />
-          {item.holder_id !== item.owner_id && <PersonChip member={holder} prefix="With" />}
+          {isLent(item) && (item.holder_name ? <NameChip name={item.holder_name} prefix="With" /> : <PersonChip member={holder} prefix="With" />)}
+          {status === 'unavailable' && item.availability_note && <span className="note">{item.availability_note}</span>}
         </div>
       </button>
     </li>

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { Item, SortKey } from '../types'
+import { statusOf } from './status'
 
 export interface FilterState {
   categories: string[]
+  statuses: string[]
   owners: string[]
   holders: string[]
   photoOnly: boolean
   sort: SortKey
 }
 
-export const EMPTY_FILTERS: FilterState = { categories: [], owners: [], holders: [], photoOnly: false, sort: 'newest' }
+export const EMPTY_FILTERS: FilterState = { categories: [], statuses: [], owners: [], holders: [], photoOnly: false, sort: 'newest' }
 
 const STORE_KEY = 'sisterhood-filters'
 
@@ -34,13 +36,14 @@ export function useStoredFilters() {
 }
 
 export const activeCount = (f: FilterState) =>
-  f.categories.length + f.owners.length + f.holders.length + (f.photoOnly ? 1 : 0) + (f.sort !== 'newest' ? 1 : 0)
+  f.categories.length + f.statuses.length + f.owners.length + f.holders.length + (f.photoOnly ? 1 : 0) + (f.sort !== 'newest' ? 1 : 0)
 
 export function applyFilters(items: Item[], f: FilterState, ignoreCategory = false): Item[] {
   const out = items.filter((i) => {
     if (!ignoreCategory && f.categories.length && !f.categories.includes(i.category)) return false
+    if (f.statuses.length && !f.statuses.includes(statusOf(i))) return false
     if (f.owners.length && !f.owners.includes(i.owner_id ?? '')) return false
-    if (f.holders.length && !f.holders.includes(i.holder_id ?? '')) return false
+    if (f.holders.length && !f.holders.includes(i.holder_name ? '' : i.holder_id ?? '')) return false
     if (f.photoOnly && !i.photo_path) return false
     return true
   })

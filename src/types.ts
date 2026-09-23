@@ -28,6 +28,9 @@ export interface Item {
   photo_path: string | null
   owner_id: string | null
   holder_id: string | null
+  holder_name: string | null
+  available: boolean
+  availability_note: string | null
   archived: boolean
   archive_reason: string | null
   deleted_at: string | null
@@ -36,7 +39,16 @@ export interface Item {
   updated_at: string
 }
 
-export type ItemAction = 'created' | 'updated' | 'handed_over' | 'archived' | 'unarchived' | 'deleted' | 'undeleted'
+export type ItemAction =
+  | 'created'
+  | 'updated'
+  | 'handed_over'
+  | 'made_available'
+  | 'made_unavailable'
+  | 'archived'
+  | 'unarchived'
+  | 'deleted'
+  | 'undeleted'
 
 export interface ItemEvent {
   id: number
@@ -57,6 +69,9 @@ export const EDITABLE_FIELDS = [
   'photo_path',
   'owner_id',
   'holder_id',
+  'holder_name',
+  'available',
+  'availability_note',
   'archived',
   'archive_reason',
   'deleted_at',
@@ -84,3 +99,5 @@ export const CATEGORIES = [
 ] as const
 
 export type SortKey = 'newest' | 'updated' | 'az'
+
+export const UNAVAILABLE_REASONS = ['Using it myself', 'Reserved', 'Needs repair', 'Missing parts'] as const

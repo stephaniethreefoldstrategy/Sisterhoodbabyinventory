@@ -6,8 +6,10 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 
 - **Items** with a photo, description, product link, owner and who currently has it
 - **Photo upload** straight from a phone camera or camera roll. Photos are shrunk before upload and kept in private storage.
+- **Photo from the product link:** if an item has a link but no photo, the app grabs the product photo from that page (the free `link-photo` Supabase Edge Function reads the page's share image). Items saved earlier get a *Get photo from link* button.
 - **Find the product link for free:** the add/edit form has *Search photo with Google Lens* (opens Lens with the item's photo) and *Google “item name”* buttons. Copy the right product link and paste it in.
-- **Pass along:** "I've got it now", "Returned to owner" or "Pass to…"
+- **Pass along:** "I've got it now", "Returned to owner" or "Pass to…" another sister, or type the name of someone outside the app (e.g. "Mum")
+- **Available / Not available** switch with an optional reason (using it myself, reserved, needs repair…), shown on the card and filterable
 - **Views:** Everything · Free to borrow · On loan · Archive · Activity · People
 - **Categories** (Sleep, Feeding, Out & about, Car seats, Nursery, Bath & changing, Play & toys, Clothes, Books, Safety, Other) with a quick filter row showing counts
 - **Filters:** search, category, owned by, currently with, only items with photos, and sort (newest, recently changed, A–Z). Filters are remembered on each device.
@@ -18,7 +20,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 
 ## Cost
 
-Everything runs on free tiers: Supabase Free (500MB database, 1GB photo storage, 50k monthly users), Netlify Free (hosting from a private repo) and Google sign-in. There are no paid APIs. Supabase pauses a free project after a week with no visits; opening the dashboard and clicking *Restore* wakes it (data is kept).
+Everything runs on free tiers: Supabase Free (500MB database, 1GB photo storage, 50k monthly users), Netlify Free (hosting from a private repo) and Google sign-in. There are no paid APIs (the `link-photo` edge function is within Supabase's free 500k invocations/month). Supabase pauses a free project after a week with no visits; opening the dashboard and clicking *Restore* wakes it (data is kept).
 
 ## Stack
 

@@ -37,3 +37,19 @@ export function PersonChip({ member, prefix }: { member: Member | undefined; pre
     </span>
   )
 }
+
+// Someone outside the app, typed in by hand
+export function NameChip({ name, prefix }: { name: string; prefix?: string }) {
+  return (
+    <span className="person-chip">
+      <span className="avatar outside" style={{ width: 20, height: 20 }}>
+        <Clover fill="#F7F2EC" size={20} />
+        <span style={{ fontSize: 8.4 }}>{name.slice(0, 1).toUpperCase()}</span>
+      </span>
+      <span>
+        {prefix && <span className="muted">{prefix} </span>}
+        {name}
+      </span>
+    </span>
+  )
+}

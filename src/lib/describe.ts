@@ -1,4 +1,5 @@
 import type { ItemEvent, Member } from '../types'
+import { holderLabel } from './status'
 
 const nameOf = (members: Member[], id: string | null | undefined) =>
   members.find((m) => m.id === id)?.display_name ?? 'someone'
@@ -10,7 +11,11 @@ export function describeEvent(ev: ItemEvent, members: Member[]): string {
     case 'created':
       return 'added it'
     case 'handed_over':
-      return `passed it from ${nameOf(members, b?.holder_id)} to ${nameOf(members, a?.holder_id)}`
+      return `passed it from ${b ? holderLabel(b, members) : 'someone'} to ${a ? holderLabel(a, members) : 'someone'}`
+    case 'made_available':
+      return 'marked it available'
+    case 'made_unavailable':
+      return a?.availability_note ? `marked it not available (${a.availability_note.toLowerCase()})` : 'marked it not available'
     case 'archived':
       return a?.archive_reason ? `archived it (${a.archive_reason.toLowerCase()})` : 'archived it'
     case 'unarchived':
@@ -27,6 +32,7 @@ export function describeEvent(ev: ItemEvent, members: Member[]): string {
         if (b.description !== a.description) changed.push('description')
         if (b.product_link !== a.product_link) changed.push('link')
         if (b.photo_path !== a.photo_path) changed.push('photo')
+        if (b.availability_note !== a.availability_note) changed.push('availability note')
         if (b.owner_id !== a.owner_id) changed.push(`owner (now ${nameOf(members, a.owner_id)})`)
       }
       return changed.length ? `changed the ${changed.join(', ')} on it` : 'edited it'

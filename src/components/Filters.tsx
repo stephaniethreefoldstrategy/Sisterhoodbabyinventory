@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { CATEGORIES, type Item, type Member, type SortKey } from '../types'
 import { EMPTY_FILTERS, activeCount, type FilterState } from '../lib/filters'
+import { STATUS_LABEL, type Status } from '../lib/status'
+
+const STATUSES: Status[] = ['available', 'on-loan', 'unavailable']
 import { Avatar } from './Clover'
 
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
@@ -74,6 +77,16 @@ export function Filters({ filters, setFilters, search, setSearch, members, me, c
 
       {open && (
         <div className="filter-panel">
+          <div>
+            <p className="eyebrow">Status</p>
+            <div className="chips">
+              {STATUSES.map((st) => (
+                <button key={st} className={`chip ${filters.statuses.includes(st) ? 'on' : ''}`} aria-pressed={filters.statuses.includes(st)} onClick={() => set({ statuses: toggle(filters.statuses, st) })}>
+                  {STATUS_LABEL[st]}
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <p className="eyebrow">Owned by</p>
             {personChips('owners')}

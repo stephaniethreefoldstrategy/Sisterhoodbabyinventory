@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
 import { signPhotos, uploadPhoto } from '../lib/photos'
+import { photoFromLink } from '../lib/linkPhoto'
 import { CATEGORIES, type Item, type ItemPatch, type Member } from '../types'
 import { Modal } from './Modal'
+
+const SOMEONE = '__someone'
 
 interface Props {
   item?: Item
@@ -18,7 +21,12 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
   const [description, setDescription] = useState(item?.description ?? '')
   const [link, setLink] = useState(item?.product_link ?? '')
   const [ownerId, setOwnerId] = useState(item?.owner_id ?? me.id)
-  const [holderId, setHolderId] = useState(item?.holder_id ?? item?.owner_id ?? me.id)
+  const [holderId, setHolderId] = useState(item?.holder_name ? SOMEONE : item?.holder_id ?? item?.owner_id ?? me.id)
+  const [holderName, setHolderName] = useState(item?.holder_name ?? '')
+  const [available, setAvailable] = useState(item?.available ?? true)
+  const [availabilityNote, setAvailabilityNote] = useState(item?.availability_note ?? '')
+  const [linkPhoto, setLinkPhoto] = useState<'idle' | 'loading' | 'failed'>('idle')
+  const [photoRemoved, setPhotoRemoved] = useState(false)
   const [holderTouched, setHolderTouched] = useState(!!item)
   const [photoPath, setPhotoPath] = useState(item?.photo_path ?? null)
   const [preview, setPreview] = useState<string | undefined>(photoUrl)
@@ -37,6 +45,27 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
   }
   const searchByName = () =>
     window.open(`https://www.google.com/search?q=${encodeURIComponent(name.trim())}`, '_blank', 'noopener')
+
+  const normaliseLink = (raw: string) => {
+    const url = raw.trim()
+    return url && !/^https?:\/\//i.test(url) ? `https://${url}` : url
+  }
+
+  // No photo yet but there's a product link: borrow the shop's product photo
+  const fetchLinkPhoto = async (raw = link): Promise<string | null> => {
+    const url = normaliseLink(raw)
+    if (!url || photoPath || uploading || photoRemoved) return photoPath
+    setLinkPhoto('loading')
+    const path = await photoFromLink(url)
+    if (!path) {
+      setLinkPhoto('failed')
+      return null
+    }
+    setPhotoPath(path)
+    setPreview((await signPhotos([path]))[path])
+    setLinkPhoto('idle')
+    return path
+  }
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return
@@ -57,17 +86,21 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
     e.preventDefault()
     setSaving(true)
     setError(null)
-    let url = link.trim()
-    if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`
+    const url = normaliseLink(link)
+    const outside = holderId === SOMEONE
     try {
+      const photo = photoPath ?? (url && linkPhoto !== 'failed' ? await fetchLinkPhoto(url) : null)
       await onSave({
         name: name.trim(),
         category: category || 'Other',
         description: description.trim(),
         product_link: url || null,
-        photo_path: photoPath,
+        photo_path: photo,
         owner_id: ownerId,
-        holder_id: holderId,
+        holder_id: outside ? null : holderId,
+        holder_name: outside ? holderName.trim() || null : null,
+        available,
+        availability_note: available ? null : availabilityNote.trim() || null,
       })
       onClose()
     } catch (e) {
@@ -89,7 +122,7 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
             <button type="button" className="link-btn" onClick={() => fileRef.current?.click()}>
               Change photo
             </button>
-            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined)}}>
+            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined); setPhotoRemoved(true) }}>
               Remove photo
             </button>
           </div>
@@ -122,8 +155,21 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
         </label>
         <label>
           Link to product <span className="muted">(optional)</span>
-          <input type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" />
+          <input
+            type="url"
+            inputMode="url"
+            value={link}
+            onChange={(e) => { setLink(e.target.value); setLinkPhoto('idle') }}
+            onBlur={() => fetchLinkPhoto()}
+            placeholder="https://…"
+          />
         </label>
+        {linkPhoto === 'loading' && (
+          <p className="muted small row gap"><span className="spinner" aria-hidden="true" /> Getting the photo from that link…</p>
+        )}
+        {linkPhoto === 'failed' && !photoPath && (
+          <p className="muted small">Couldn't get a photo from that link. You can still add one yourself.</p>
+        )}
         {(photoPath || name.trim()) && !link.trim() && (
           <div className="find-product">
             <span className="muted small">Find the product page:</span>
@@ -161,11 +207,35 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
               {members.map((m) => (
                 <option key={m.id} value={m.id}>{m.display_name}</option>
               ))}
+              <option value={SOMEONE}>Someone else…</option>
             </select>
           </label>
         </div>
+        {holderId === SOMEONE && (
+          <label>
+            Their name
+            <input required value={holderName} onChange={(e) => setHolderName(e.target.value)} placeholder="e.g. Mum, Jess from mothers group" />
+          </label>
+        )}
+        <div className="label-text">
+          Can it be borrowed?
+          <div className="avail-toggle" role="radiogroup" aria-label="Availability">
+            <button type="button" role="radio" aria-checked={available} className={available ? 'on' : ''} onClick={() => setAvailable(true)}>
+              Available
+            </button>
+            <button type="button" role="radio" aria-checked={!available} className={!available ? 'on off' : ''} onClick={() => setAvailable(false)}>
+              Not available
+            </button>
+          </div>
+        </div>
+        {!available && (
+          <label>
+            Why not? <span className="muted">(optional)</span>
+            <input value={availabilityNote} onChange={(e) => setAvailabilityNote(e.target.value)} placeholder="e.g. Using it myself, needs repair" />
+          </label>
+        )}
         {error && <p className="error">{error}</p>}
-        <button className="btn primary wide" disabled={saving || uploading || !name.trim()}>
+        <button className="btn primary wide" disabled={saving || uploading || linkPhoto === 'loading' || !name.trim()}>
           {saving ? 'Saving…' : item ? 'Save changes' : 'Add to inventory'}
         </button>
       </form>
