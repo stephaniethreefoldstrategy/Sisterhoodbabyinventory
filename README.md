@@ -6,7 +6,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 
 - **Items** with a photo, description, product link, owner and who currently has it
 - **Photo upload** straight from a phone camera or camera roll. Photos are shrunk before upload and kept in private storage.
-- **Suggestions from a photo:** after a photo is added, Claude identifies the item and searches the web for its product page, then offers a name, category, description and link that you can accept with one tap. It only offers links that actually came back in the search results. This runs in the `suggest-item` Supabase Edge Function.
+- **Find the product link for free:** the add/edit form has *Search photo with Google Lens* (opens Lens with the item's photo) and *Google “item name”* buttons. Copy the right product link and paste it in.
 - **Pass along:** "I've got it now", "Returned to owner" or "Pass to…"
 - **Views:** Everything · Free to borrow · On loan · Archive · Activity · People
 - **Categories** (Sleep, Feeding, Out & about, Car seats, Nursery, Bath & changing, Play & toys, Clothes, Books, Safety, Other) with a quick filter row showing counts
@@ -16,9 +16,13 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 - **Live updates** when someone else makes a change
 - **Own login for everyone:** each sister signs in with Google *or* her own email + password (create account, forgot password, and change password under *People*). Only emails added under *People* can see anything, and the database enforces this with row level security.
 
+## Cost
+
+Everything runs on free tiers: Supabase Free (500MB database, 1GB photo storage, 50k monthly users), GitHub Pages and Google sign-in. There are no paid APIs. Supabase pauses a free project after a week with no visits; opening the dashboard and clicking *Restore* wakes it (data is kept).
+
 ## Stack
 
-React + Vite + TypeScript, Supabase (auth, Postgres, storage, realtime, edge functions), Claude API for photo suggestions. The schema is in `supabase/migrations/`.
+React + Vite + TypeScript, Supabase (auth, Postgres, storage, realtime). The schema is in `supabase/migrations/`.
 
 ## Run locally
 
@@ -34,7 +38,6 @@ npm run dev
    Supabase → Authentication → Sign In / Providers → Google.
 2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to
    `https://stephaniethreefoldstrategy.github.io/Sisterhoodbabyinventory/` and add `http://localhost:5173/` to the redirect URLs.
-3. **Hosting:** in GitHub → Settings → Pages, set Source to *GitHub Actions*. Each push to `main` then deploys.
+3. **Hosting (free, public repo):** in GitHub → Settings → Pages, set Source to *GitHub Actions*. Each push to `main` (or the current default branch) then deploys.
 4. **Invite everyone:** sign in, open *People* and add each sister's email. They then either tap *Continue with Google* or choose *Create account* and set a password.
-5. **Photo suggestions:** add an Anthropic API key (console.anthropic.com → API keys) as a secret named `ANTHROPIC_API_KEY` under Supabase → Edge Functions → Secrets. Until then the app works normally without suggestions.
-6. **Emails (recommended):** Supabase's built-in mailer only sends a few emails an hour, which can hold up sign-up confirmations and password resets. For reliable delivery, add SMTP details (e.g. Resend or your Google Workspace) under Supabase → Authentication → Emails → SMTP Settings.
+5. **Emails (recommended):** Supabase's built-in mailer only sends a few emails an hour, which can hold up sign-up confirmations and password resets. For reliable delivery, add SMTP details (e.g. Resend or your Google Workspace) under Supabase → Authentication → Emails → SMTP Settings.

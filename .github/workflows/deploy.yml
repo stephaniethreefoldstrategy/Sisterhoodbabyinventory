@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/shared-inventory-app-x1r02z]
   workflow_dispatch:
 
 permissions:

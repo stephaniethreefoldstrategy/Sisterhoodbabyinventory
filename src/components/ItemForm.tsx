@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
-import { uploadPhoto } from '../lib/photos'
-import { suggestFromPhoto, type Suggestion } from '../lib/suggest'
+import { signPhotos, uploadPhoto } from '../lib/photos'
 import { CATEGORIES, type Item, type ItemPatch, type Member } from '../types'
 import { Modal } from './Modal'
 
@@ -26,28 +25,18 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [suggestion, setSuggestion] = useState<Suggestion | null>(null)
-  const [suggesting, setSuggesting] = useState(false)
-  const [suggestNote, setSuggestNote] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const askForSuggestion = async (path: string) => {
-    setSuggesting(true)
-    setSuggestion(null)
-    setSuggestNote(null)
-    const result = await suggestFromPhoto(path)
-    setSuggesting(false)
-    if ('error' in result) setSuggestNote(result.disabled ? null : result.error)
-    else setSuggestion(result)
+  // Free product lookup: Google Lens with the photo, or a Google search by name
+  const openLens = async () => {
+    if (!photoPath) return
+    const tab = window.open('', '_blank')
+    const url = (await signPhotos([photoPath]))[photoPath]
+    if (tab && url) tab.location.href = `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(url)}`
+    else tab?.close()
   }
-
-  const applySuggestion = (s: Suggestion) => {
-    if (!name.trim()) setName(s.name)
-    if (!category) setCategory(s.category)
-    if (!description.trim()) setDescription(s.description)
-    if (!link.trim() && s.product_link) setLink(s.product_link)
-    setSuggestion(null)
-  }
+  const searchByName = () =>
+    window.open(`https://www.google.com/search?q=${encodeURIComponent(name.trim())}`, '_blank', 'noopener')
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return
@@ -55,9 +44,7 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
     setPreview(URL.createObjectURL(file))
     setUploading(true)
     try {
-      const path = await uploadPhoto(file)
-      setPhotoPath(path)
-      askForSuggestion(path)
+      setPhotoPath(await uploadPhoto(file))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Photo upload failed')
       setPreview(photoUrl)
@@ -102,49 +89,9 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
             <button type="button" className="link-btn" onClick={() => fileRef.current?.click()}>
               Change photo
             </button>
-            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined); setSuggestion(null) }}>
+            <button type="button" className="link-btn" onClick={() => { setPhotoPath(null); setPreview(undefined)}}>
               Remove photo
             </button>
-            {photoPath && !suggesting && !suggestion && (
-              <button type="button" className="link-btn" onClick={() => askForSuggestion(photoPath)}>
-                Suggest details
-              </button>
-            )}
-          </div>
-        )}
-
-        {suggesting && (
-          <div className="suggest-card busy">
-            <span className="spinner" aria-hidden="true" />
-            Looking up this item and its product page…
-          </div>
-        )}
-        {suggestNote && <p className="muted small">{suggestNote}</p>}
-        {suggestion && (
-          <div className="suggest-card">
-            <p className="eyebrow">Looks like</p>
-            <strong>{suggestion.name}</strong>
-            <span className="muted small">
-              {suggestion.category}
-              {suggestion.confidence !== 'high' && ` · ${suggestion.confidence} confidence`}
-            </span>
-            {suggestion.description && <span className="small">{suggestion.description}</span>}
-            {suggestion.product_link ? (
-              <a className="small" href={suggestion.product_link} target="_blank" rel="noreferrer">
-                {new URL(suggestion.product_link).hostname.replace(/^www\./, '')} ↗
-              </a>
-            ) : (
-              <span className="muted small">No product link found</span>
-            )}
-            <div className="row gap">
-              <button type="button" className="btn primary" onClick={() => applySuggestion(suggestion)}>
-                Use this
-              </button>
-              <button type="button" className="link-btn" onClick={() => setSuggestion(null)}>
-                No thanks
-              </button>
-            </div>
-            <span className="muted tiny">Fills in any empty fields. Check the link before saving.</span>
           </div>
         )}
 
@@ -177,6 +124,22 @@ export function ItemForm({ item, me, members, photoUrl, onSave, onClose }: Props
           Link to product <span className="muted">(optional)</span>
           <input type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" />
         </label>
+        {(photoPath || name.trim()) && !link.trim() && (
+          <div className="find-product">
+            <span className="muted small">Find the product page:</span>
+            {photoPath && (
+              <button type="button" className="chip" onClick={openLens}>
+                Search photo with Google Lens ↗
+              </button>
+            )}
+            {name.trim() && (
+              <button type="button" className="chip" onClick={searchByName}>
+                Google “{name.trim()}” ↗
+              </button>
+            )}
+            <span className="muted tiny">Copy the link of the right product and paste it above.</span>
+          </div>
+        )}
         <div className="two-col">
           <label>
             Who owns it
