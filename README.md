@@ -18,7 +18,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 
 ## Cost
 
-Everything runs on free tiers: Supabase Free (500MB database, 1GB photo storage, 50k monthly users), GitHub Pages and Google sign-in. There are no paid APIs. Supabase pauses a free project after a week with no visits; opening the dashboard and clicking *Restore* wakes it (data is kept).
+Everything runs on free tiers: Supabase Free (500MB database, 1GB photo storage, 50k monthly users), Netlify Free (hosting from a private repo) and Google sign-in. There are no paid APIs. Supabase pauses a free project after a week with no visits; opening the dashboard and clicking *Restore* wakes it (data is kept).
 
 ## Stack
 
@@ -37,7 +37,7 @@ npm run dev
    `https://eblyucklornvjollzfha.supabase.co/auth/v1/callback`. Then paste the client ID and secret into
    Supabase → Authentication → Sign In / Providers → Google.
 2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to
-   `https://stephaniethreefoldstrategy.github.io/Sisterhoodbabyinventory/` and add `http://localhost:5173/` to the redirect URLs.
-3. **Hosting (free, public repo):** in GitHub → Settings → Pages, set Source to *GitHub Actions*. Each push to `main` (or the current default branch) then deploys.
+   your Netlify address (e.g. `https://sisterhood-inventory.netlify.app/`) and add it plus `http://localhost:5173/` to the redirect URLs.
+3. **Hosting (free, works with a private repo):** sign up at netlify.com with GitHub → *Add new site* → *Import an existing project* → GitHub → pick this repo and allow access to it. The build settings come from `netlify.toml`, so just click *Deploy*. Rename the site under *Site configuration* (e.g. `sisterhood-inventory`). Every push to the production branch redeploys automatically.
 4. **Invite everyone:** sign in, open *People* and add each sister's email. They then either tap *Continue with Google* or choose *Create account* and set a password.
 5. **Emails (recommended):** Supabase's built-in mailer only sends a few emails an hour, which can hold up sign-up confirmations and password resets. For reliable delivery, add SMTP details (e.g. Resend or your Google Workspace) under Supabase → Authentication → Emails → SMTP Settings.
