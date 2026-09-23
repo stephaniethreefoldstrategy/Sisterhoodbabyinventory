@@ -38,6 +38,15 @@ export function People({ me, members, items, onChanged }: Props) {
   const [colour, setColour] = useState<Colour>('pink')
   const [myName, setMyName] = useState(me.display_name)
   const [error, setError] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [pwStatus, setPwStatus] = useState<string | null>(null)
+
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPwStatus(error ? error.message : 'Password saved. You can now sign in with your email and this password.')
+    if (!error) setNewPassword('')
+  }
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,12 +95,20 @@ export function People({ me, members, items, onChanged }: Props) {
         </label>
         <p className="label-text">Your colour</p>
         <ColourPicker value={me.colour} onChange={(c) => updateMe({ colour: c })} />
+        <form className="stack" onSubmit={changePassword}>
+          <label>
+            {me.email} password
+            <input type="password" required minLength={8} autoComplete="new-password" placeholder="Set a new password (8+ characters)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          </label>
+          <button className="btn wide">Save password</button>
+          {pwStatus && <p className="muted small">{pwStatus}</p>}
+        </form>
       </section>
 
       {members.length < MAX_MEMBERS && (
         <form className="panel stack" onSubmit={add}>
           <h3 className="eyebrow">Invite a sister</h3>
-          <p className="muted small">Add the email they sign in with (their Google account). They'll get in the next time they sign in.</p>
+          <p className="muted small">Add their email. They can then either tap “Continue with Google” (if it's a Google email) or choose “Create account” and set their own password.</p>
           <label>
             Name
             <input required value={name} onChange={(e) => setName(e.target.value)} />

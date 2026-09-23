@@ -4,21 +4,42 @@ import { Clover } from './Clover'
 
 const redirectTo = () => window.location.origin + window.location.pathname
 
+type Mode = 'signin' | 'signup' | 'forgot'
+
 export function Login() {
-  const [emailMode, setEmailMode] = useState(false)
+  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [status, setStatus] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const google = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo() } })
     if (error) setStatus(error.message)
   }
 
-  const sendLink = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStatus('Sending…')
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: redirectTo() } })
-    setStatus(error ? error.message : 'Check your inbox for a sign-in link.')
+    setBusy(true)
+    setStatus(null)
+    const addr = email.trim().toLowerCase()
+    if (mode === 'signin') {
+      const { error } = await supabase.auth.signInWithPassword({ email: addr, password })
+      if (error) setStatus(error.message === 'Invalid login credentials' ? 'That email and password don\'t match.' : error.message)
+    } else if (mode === 'signup') {
+      const { data, error } = await supabase.auth.signUp({ email: addr, password, options: { emailRedirectTo: redirectTo() } })
+      if (error) setStatus(error.message)
+      else if (!data.session) setStatus('Nearly there! Check your inbox and tap the link to confirm your email.')
+    } else {
+      const { error } = await supabase.auth.resetPasswordForEmail(addr, { redirectTo: redirectTo() })
+      setStatus(error ? error.message : 'If that email has an account, a reset link is on its way.')
+    }
+    setBusy(false)
+  }
+
+  const switchTo = (m: Mode) => {
+    setMode(m)
+    setStatus(null)
   }
 
   return (
@@ -45,18 +66,77 @@ export function Login() {
           Continue with Google
         </button>
 
-        {emailMode ? (
-          <form onSubmit={sendLink} className="stack">
-            <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <button className="btn wide">Email me a sign-in link</button>
-          </form>
-        ) : (
-          <button className="link-btn" onClick={() => setEmailMode(true)}>
-            No Google account? Use email instead
+        <div className="or"><span>or use email</span></div>
+
+        {mode !== 'forgot' && (
+          <div className="seg" role="tablist">
+            <button role="tab" aria-selected={mode === 'signin'} className={mode === 'signin' ? 'on' : ''} onClick={() => switchTo('signin')}>
+              Sign in
+            </button>
+            <button role="tab" aria-selected={mode === 'signup'} className={mode === 'signup' ? 'on' : ''} onClick={() => switchTo('signup')}>
+              Create account
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={submit} className="stack">
+          <input type="email" required autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {mode !== 'forgot' && (
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              placeholder={mode === 'signup' ? 'Choose a password (8+ characters)' : 'Password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+          <button className="btn wide" disabled={busy}>
+            {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create my account' : 'Send reset link'}
+          </button>
+        </form>
+
+        {mode === 'signin' && (
+          <button className="link-btn" onClick={() => switchTo('forgot')}>
+            Forgot password?
           </button>
         )}
-        {status && <p className="status">{status}</p>}
+        {mode === 'forgot' && (
+          <button className="link-btn" onClick={() => switchTo('signin')}>
+            Back to sign in
+          </button>
+        )}
+        {mode === 'signup' && (
+          <p className="status">Use the email that was added to the sisterhood.</p>
+        )}
+        {status && <p className="status" role="status">{status}</p>}
       </div>
+    </main>
+  )
+}
+
+// Shown after tapping a password reset link
+export function SetNewPassword({ onDone }: { onDone: () => void }) {
+  const [password, setPassword] = useState('')
+  const [status, setStatus] = useState<string | null>(null)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) setStatus(error.message)
+    else onDone()
+  }
+
+  return (
+    <main className="login">
+      <form className="login-card" onSubmit={submit}>
+        <Clover fill="#FFA873" size={48} />
+        <h1 className="display">New password</h1>
+        <input type="password" required minLength={8} autoComplete="new-password" placeholder="New password (8+ characters)" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <button className="btn primary wide">Save password</button>
+        {status && <p className="status">{status}</p>}
+      </form>
     </main>
   )
 }

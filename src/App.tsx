@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase'
 import { useInventory } from './lib/useInventory'
 import { insertItem, updateItem } from './lib/api'
 import { EDITABLE_FIELDS, snapshot, type Item, type ItemEvent, type ItemPatch, type Member } from './types'
-import { Login, NotInvited } from './components/Login'
+import { Login, NotInvited, SetNewPassword } from './components/Login'
 import { Avatar, Clover, PersonChip } from './components/Clover'
 import { ItemForm } from './components/ItemForm'
 import { ItemDetail } from './components/ItemDetail'
@@ -32,15 +32,20 @@ interface UndoEntry {
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
+  const [recovering, setRecovering] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s)
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
   if (session === undefined) return <Splash />
   if (!session) return <Login />
+  if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />
   return <Inventory session={session} />
 }
 

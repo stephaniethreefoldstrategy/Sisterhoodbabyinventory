@@ -119,6 +119,11 @@ textarea { resize: vertical; }
 .lede { color: var(--muted); margin: 4px 0 10px; }
 .status { font-size: 0.9rem; color: var(--muted); margin: 0; }
 .login form { width: 100%; }
+.or { width: 100%; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.85rem; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.seg { width: 100%; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: var(--cream); }
+.seg button { border: 0; background: transparent; border-radius: 999px; padding: 9px; font-weight: 600; color: var(--muted); }
+.seg button.on { background: var(--paper); color: var(--plum); box-shadow: 0 1px 3px rgba(95, 29, 62, 0.15); }
 .pulse { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(0.85) rotate(45deg); } }
 

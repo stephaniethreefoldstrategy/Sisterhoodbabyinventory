@@ -13,7 +13,7 @@ A shared list of baby items for up to 8 sisters: what each person owns, who has 
 - **Archive** with a reason (thrown away, given away, sold, not using, broken). You can bring things back.
 - **Undo:** every change shows an Undo button, Ctrl/Cmd+Z undoes your last change, and each item's history (and the Activity feed) can undo its latest change. Deleting is soft, so deleted items can always be restored.
 - **Live updates** when someone else makes a change
-- **Access:** Google sign-in (with an email-link fallback). Only emails added under *People* can see anything, and the database enforces this with row level security.
+- **Own login for everyone:** each sister signs in with Google *or* her own email + password (create account, forgot password, and change password under *People*). Only emails added under *People* can see anything, and the database enforces this with row level security.
 
 ## Stack
 
@@ -34,4 +34,5 @@ npm run dev
 2. **URLs:** in Supabase → Authentication → URL Configuration, set the Site URL to
    `https://stephaniethreefoldstrategy.github.io/Sisterhoodbabyinventory/` and add `http://localhost:5173/` to the redirect URLs.
 3. **Hosting:** in GitHub → Settings → Pages, set Source to *GitHub Actions*. Each push to `main` then deploys.
-4. **Invite everyone:** sign in, open *People* and add each sister's Google email.
+4. **Invite everyone:** sign in, open *People* and add each sister's email. They then either tap *Continue with Google* or choose *Create account* and set a password.
+5. **Emails (recommended):** Supabase's built-in mailer only sends a few emails an hour, which can hold up sign-up confirmations and password resets. For reliable delivery, add SMTP details (e.g. Resend or your Google Workspace) under Supabase → Authentication → Emails → SMTP Settings.
